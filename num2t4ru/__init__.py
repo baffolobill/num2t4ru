@@ -8,48 +8,48 @@ Changed on 13.03.2016 by Artem Tiumentcev
 import decimal
 
 
-units = (
-    u'ноль',
+UNITS = (
+    'ноль',
 
-    (u'один', u'одна'),
-    (u'два', u'две'),
+    ('один', 'одна'),
+    ('два', 'две'),
 
-    u'три', u'четыре', u'пять',
-    u'шесть', u'семь', u'восемь', u'девять'
+    'три', 'четыре', 'пять',
+    'шесть', 'семь', 'восемь', 'девять'
 )
 
-teens = (
-    u'десять', u'одиннадцать',
-    u'двенадцать', u'тринадцать',
-    u'четырнадцать', u'пятнадцать',
-    u'шестнадцать', u'семнадцать',
-    u'восемнадцать', u'девятнадцать'
+TEENS = (
+    'десять', 'одиннадцать',
+    'двенадцать', 'тринадцать',
+    'четырнадцать', 'пятнадцать',
+    'шестнадцать', 'семнадцать',
+    'восемнадцать', 'девятнадцать'
 )
 
-tens = (
-    teens,
-    u'двадцать', u'тридцать',
-    u'сорок', u'пятьдесят',
-    u'шестьдесят', u'семьдесят',
-    u'восемьдесят', u'девяносто'
+TENS = (
+    TEENS,
+    'двадцать', 'тридцать',
+    'сорок', 'пятьдесят',
+    'шестьдесят', 'семьдесят',
+    'восемьдесят', 'девяносто'
 )
 
-hundreds = (
-    u'сто', u'двести',
-    u'триста', u'четыреста',
-    u'пятьсот', u'шестьсот',
-    u'семьсот', u'восемьсот',
-    u'девятьсот'
+HUNDREDS = (
+    'сто', 'двести',
+    'триста', 'четыреста',
+    'пятьсот', 'шестьсот',
+    'семьсот', 'восемьсот',
+    'девятьсот'
 )
 
-orders = (  # plural forms and gender
-    # ((u'', u'', u''), 'm'), # ((u'рубль', u'рубля', u'рублей'), 'm'), # ((u'копейка', u'копейки', u'копеек'), 'f')
-    ((u'тысяча', u'тысячи', u'тысяч'), 'f'),
-    ((u'миллион', u'миллиона', u'миллионов'), 'm'),
-    ((u'миллиард', u'миллиарда', u'миллиардов'), 'm'),
+ORDERS = (  # plural forms and gender
+    # (('', '', ''), 'm'), # (('рубль', 'рубля', 'рублей'), 'm'), # (('копейка', 'копейки', 'копеек'), 'f')
+    (('тысяча', 'тысячи', 'тысяч'), 'f'),
+    (('миллион', 'миллиона', 'миллионов'), 'm'),
+    (('миллиард', 'миллиарда', 'миллиардов'), 'm'),
 )
 
-minus = u'минус'
+MINUS = 'минус'
 
 
 def thousand(rest, sex):
@@ -59,15 +59,15 @@ def thousand(rest, sex):
     name = []
     use_teens = 10 <= rest % 100 <= 19
     if not use_teens:
-        data = ((units, 10), (tens, 100), (hundreds, 1000))
+        data = ((UNITS, 10), (TENS, 100), (HUNDREDS, 1000))
     else:
-        data = ((teens, 10), (hundreds, 1000))
+        data = ((TEENS, 10), (HUNDREDS, 1000))
     for names, x in data:
         cur = int(((rest - prev) % x) * 10 / x)
         prev = rest % x
         if x == 10 and use_teens:
             plural = 2
-            name.append(teens[cur])
+            name.append(TEENS[cur])
         elif cur == 0:
             continue
         elif x == 10:
@@ -86,45 +86,53 @@ def thousand(rest, sex):
     return plural, name
 
 
-def num2text(num, main_units=((u'', u'', u''), 'm')):
+def num2text(num, main_units=(('', '', ''), 'm'), do_not_replace_number=False):
     """
     http://ru.wikipedia.org/wiki/Gettext#.D0.9C.D0.BD.D0.BE.D0.B6.D0.B5.D1.81.\
     D1.82.D0.B2.D0.B5.D0.BD.D0.BD.D1.8B.D0.B5_.D1.87.D0.B8.D1.81.D0.BB.D0.B0_2
     """
-    _orders = (main_units,) + orders
+    _orders = (main_units,) + ORDERS
+    if do_not_replace_number and isinstance(num, str) and num in {'00', '0'}:
+        return ' '.join((num, _orders[0][0][2])).strip()  # ноль
+    
     if num == 0:
-        return ' '.join((units[0], _orders[0][0][2])).strip() # ноль
-
+        return ' '.join((UNITS[0], _orders[0][0][2])).strip()  # ноль
+    
     rest = abs(num)
-    ord = 0
+    ord_ = 0
     name = []
     while rest > 0:
-        plural, nme = thousand(rest % 1000, _orders[ord][1])
-        if nme or ord == 0:
-            name.append(_orders[ord][0][plural])
+        plural, nme = thousand(rest % 1000, _orders[ord_][1])
+        if nme or ord_ == 0:
+            name.append(_orders[ord_][0][plural])
+        if do_not_replace_number:
+            name += [str(num)]
+            break
         name += nme
         rest = int(rest / 1000)
-        ord += 1
+        ord_ += 1
     if num < 0:
-        name.append(minus)
+        name.append(MINUS)
     name.reverse()
     return ' '.join(name).strip()
 
 
 def decimal2text(value, places=2,
+                 fractional_as_number=False,
                  int_units=(('', '', ''), 'm'),
                  exp_units=(('', '', ''), 'm')):
     value = decimal.Decimal(value)
-    q = decimal.Decimal(10) ** -places
+    round_precision = decimal.Decimal(10) ** -places
 
-    integral, exp = str(value.quantize(q)).split('.')
-    
-    if int(exp):
-        return u'{} {}'.format(
-            num2text(int(integral), int_units),
-            num2text(int(exp), exp_units))
-    else:
-        return num2text(int(integral), int_units)
+    integral, exp = str(value.quantize(round_precision)).split('.')
+    exp = int(exp)
+    if fractional_as_number:
+        exp = exp or '00'
+
+    return '{} {}'.format(
+        num2text(int(integral), int_units),
+        num2text(exp, exp_units, do_not_replace_number=fractional_as_number))
+
 
 if __name__ == '__main__':
     import sys
@@ -134,12 +142,12 @@ if __name__ == '__main__':
             if '.' in num:
                 print(decimal2text(
                     decimal.Decimal(num),
-                    int_units=((u'штука', u'штуки', u'штук'), 'f'),
-                    exp_units=((u'кусок', u'куска', u'кусков'), 'm')))
+                    int_units=(('штука', 'штуки', 'штук'), 'f'),
+                    exp_units=(('кусок', 'куска', 'кусков'), 'm')))
             else:
                 print(num2text(
                     int(num),
-                    main_units=((u'штука', u'штуки', u'штук'), 'f')))
+                    main_units=(('штука', 'штуки', 'штук'), 'f')))
         except ValueError:
             print(sys.stderr, "Invalid argument {}".format(sys.argv[1]))
         sys.exit()

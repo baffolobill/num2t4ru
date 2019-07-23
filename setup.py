@@ -8,7 +8,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 setup(
     name='num2t4ru',
-    version='2.0.0',
+    version='3.0.0',
     author='Sergey Prokhorov',
     author_email='me@seriyps.ru',
     url='https://github.com/seriyps/ru_number_to_text',
